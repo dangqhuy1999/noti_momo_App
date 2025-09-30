@@ -91,6 +91,7 @@ class MyNotificationListener : NotificationListenerService() {
         // Đóng kết nối khi service bị hủy
         try { bluetoothSocket?.close() } catch (e: IOException) { Log.e("BluetoothConnection", "Error closing socket: ${e.message}") }
     }
+
     fun convertToNoAccent(input: String): String {
         val accents = mapOf(
             'á' to 'a', 'à' to 'a', 'ả' to 'a', 'ã' to 'a', 'ạ' to 'a',
@@ -126,6 +127,7 @@ class MyNotificationListener : NotificationListenerService() {
 
         if (sbn.packageName == packageNameFilter) {
             // ... (Phần xử lý thông báo giữ nguyên)
+
             val notificationObject = JSONObject()
             try {
                 val extras = sbn.notification.extras
@@ -143,12 +145,12 @@ class MyNotificationListener : NotificationListenerService() {
 
                 // Gửi dữ liệu qua Bluetooth
                 sendData(output)
+
             } catch (e: Exception) {
                 Log.e("NotificationReader", "Error creating JSON", e)
             }
         }
     }
-
     private fun sendData(data: String) {
         // Thay đổi ::connectedThread.isInitialized thành connectedThread != null
         if (connectedThread != null) {
@@ -160,6 +162,7 @@ class MyNotificationListener : NotificationListenerService() {
         } else {
             Log.e("BluetoothSend", "Error: ConnectedThread not ready. Bluetooth connection might be lost or failed in onCreate.")
         }
+
     }
     private fun writeToFile(data: String) {
         val file = File(getExternalFilesDir(null), "notifications.json")
