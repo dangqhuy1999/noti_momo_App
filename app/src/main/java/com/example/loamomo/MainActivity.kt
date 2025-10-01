@@ -156,36 +156,46 @@ class MainActivity : AppCompatActivity() {
     private fun checkAndSetStatus() {
         val isNotifEnabled = isNotificationServiceEnabled()
         var status = "Trạng thái: "
+        var statusColor = android.R.color.holo_green_dark // Mặc định là Tốt (Xanh lá)
 
+        // 1. Kiểm tra Quyền Thông báo (QUAN TRỌNG NHẤT - Ưu tiên Cao)
         if (isNotifEnabled) {
             status += "✅ Đã cấp quyền Thông báo."
-            tvStatus.setTextColor(ContextCompat.getColor(this, android.R.color.holo_green_dark))
         } else {
             status += "❌ Thiếu quyền Thông báo."
-            tvStatus.setTextColor(ContextCompat.getColor(this, android.R.color.holo_red_dark))
-            return // Dừng lại nếu chưa có quyền quan trọng nhất
+            statusColor = android.R.color.holo_red_dark // Đặt màu ĐỎ nếu thiếu quyền này
+
+            // Cập nhật trạng thái và DỪNG LẠI nếu quyền quan trọng nhất chưa có
+            tvStatus.setTextColor(ContextCompat.getColor(this, statusColor))
+            tvStatus.text = status
+            return
         }
 
-        // Kiểm tra quyền Bluetooth/Vị trí sau khi đã có quyền thông báo
+        // 2. Kiểm tra Quyền Bluetooth (Ưu tiên Trung bình)
         var hasBluetoothPermission = true
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PermissionChecker.PERMISSION_GRANTED) {
-                hasBluetoothPermission = false
-            }
+
+        // Kiểm tra quyền BLUETOOTH_CONNECT (API 31+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PermissionChecker.PERMISSION_GRANTED) {
+            hasBluetoothPermission = false
         }
+
+        // Kiểm tra quyền ACCESS_FINE_LOCATION
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PermissionChecker.PERMISSION_GRANTED) {
             hasBluetoothPermission = false
         }
 
         if (hasBluetoothPermission) {
             status += "\n✅ Đã cấp quyền Bluetooth."
-            // Nếu cả 2 quyền đã có, service sẽ tự động chạy khi có thông báo
         } else {
             status += "\n❌ Thiếu quyền Bluetooth/Vị trí."
-            tvStatus.setTextColor(ContextCompat.getColor(this, android.R.color.holo_orange_dark))
+            statusColor = android.R.color.holo_orange_dark // Đặt màu CAM nếu thiếu quyền này
         }
 
+        // 3. Đặt Text và Màu Sắc LẦN CUỐI (TỔNG KẾT)
         tvStatus.text = status
+        // Dòng này được CẢI TIẾN: Chỉ đặt màu ở đây, màu sẽ là Đỏ, Cam, hoặc Xanh lá (giá trị mặc định)
+        tvStatus.setTextColor(ContextCompat.getColor(this, statusColor))
     }
 }
 
