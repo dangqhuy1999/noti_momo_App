@@ -37,6 +37,7 @@ class MyNotificationListener : NotificationListenerService() {
     @RequiresPermission(value = "android.permission.BLUETOOTH_CONNECT")
     override fun onCreate() {
         super.onCreate()
+        Log.d("ServiceLifecycle", "MyNotificationListener Service STARTED.") // <-- THÊM LOG NÀY
 
         // *** CẢI TIẾN 1: ĐỌC TẤT CẢ CONFIG TỪ SharedPreferences TRONG onCreate() ***
         val sharedPrefs = applicationContext.getSharedPreferences("AppConfig", MODE_PRIVATE)
