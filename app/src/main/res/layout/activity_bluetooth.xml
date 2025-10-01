@@ -2,7 +2,6 @@
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:padding="16dp"
@@ -19,36 +18,40 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/til_mac_address"
+    <TextView
+        android:id="@+id/tv_selected_mac_address"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:hint="Địa chỉ MAC Bluetooth (ví dụ: B8:D6:1A:B9:E8:B2)"
-        app:layout_constraintTop_toBottomOf="@id/tv_title">
+        android:text="Địa chỉ MAC: Chưa chọn"
+        android:textSize="16sp"
+        app:layout_constraintTop_toBottomOf="@id/tv_title"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/et_mac_address"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:inputType="textCapCharacters"
-            android:text="B8:D6:1A:B9:E8:B2"/>
-    </com.google.android.material.textfield.TextInputLayout>
+    <Button
+        android:id="@+id/btn_scan_device"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Quét &amp; Chọn Thiết Bị Bluetooth"
+        app:layout_constraintTop_toBottomOf="@id/tv_selected_mac_address"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
 
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/til_uuid"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="16dp"
         android:hint="UUID Dịch vụ Bluetooth (ví dụ: 00001101-0000-1000-8000-00805F9B34FB)"
-        app:layout_constraintTop_toBottomOf="@id/til_mac_address">
-
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/et_uuid"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:inputType="textNoSuggestions"
-            android:text="00001101-0000-1000-8000-00805F9B34FB"/>
+        app:layout_constraintTop_toBottomOf="@id/btn_scan_device"> <com.google.android.material.textfield.TextInputEditText
+        android:id="@+id/et_uuid"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:inputType="textNoSuggestions"
+        android:text="00001101-0000-1000-8000-00805F9B34FB"/>
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.textfield.TextInputLayout

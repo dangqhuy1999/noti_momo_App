@@ -4,7 +4,10 @@ import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothManager // <-- THÊM DÒNG NÀY
 import android.bluetooth.BluetoothSocket
+import android.content.Intent
+import android.content.Context // <-- THÊM DÒNG NÀY
 import android.util.Log
 import androidx.annotation.RequiresPermission
 import org.json.JSONArray
@@ -21,6 +24,7 @@ class MyNotificationListener : NotificationListenerService() {
 
     // Biến cho Bluetooth (Nullable và an toàn)
     private lateinit var bluetoothAdapter: BluetoothAdapter
+
     private var bluetoothSocket: BluetoothSocket? = null
     private var connectedThread: ConnectedThread? = null
 
@@ -38,6 +42,17 @@ class MyNotificationListener : NotificationListenerService() {
     override fun onCreate() {
         super.onCreate()
         Log.d("ServiceLifecycle", "MyNotificationListener Service STARTED.") // <-- THÊM LOG NÀY
+        // --- BẮT ĐẦU: Logic khởi tạo bị thiếu ---
+        val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+        bluetoothAdapter = bluetoothManager.adapter
+        // --- KẾT THÚC: Logic khởi tạo bị thiếu ---
+
+        if (bluetoothAdapter == null || !bluetoothAdapter.isEnabled) {
+            Log.e("BluetoothConnection", "Bluetooth not supported or not enabled.")
+            // Không thể tiếp tục nếu Bluetooth không sẵn sàng.
+            // Cân nhắc tắt Service hoặc báo lỗi.
+            return
+        }
 
         // *** CẢI TIẾN 1: ĐỌC TẤT CẢ CONFIG TỪ SharedPreferences TRONG onCreate() ***
         val sharedPrefs = applicationContext.getSharedPreferences("AppConfig", MODE_PRIVATE)
@@ -159,6 +174,33 @@ class MyNotificationListener : NotificationListenerService() {
             'Ý' to 'Y', 'Ỳ' to 'Y', 'Ỷ' to 'Y', 'Ỹ' to 'Y', 'Ỵ' to 'Y'
         )
         return input.map { accents[it] ?: it }.joinToString("")
+    }
+
+    // MyNotificationListener.kt
+
+    private fun connectWithNewConfig() {
+        Log.d("ServiceConfig", "Received command to read new config and reconnect.")
+        // Lặp lại logic đọc config từ SharedPreferences và kết nối lại
+        val sharedPrefs = applicationContext.getSharedPreferences("AppConfig", MODE_PRIVATE)
+        macAddress = sharedPrefs.getString("bluetooth_mac", null)
+        val uuidString = sharedPrefs.getString("bluetooth_uuid", null)
+        packageNameFilter = sharedPrefs.getString("notification_package", "com.mservice.momotransfer")!!
+
+        targetUUID = try {
+            UUID.fromString(uuidString ?: DEFAULT_UUID.toString())
+        } catch (e: IllegalArgumentException) {
+            DEFAULT_UUID
+        }
+
+        // Bắt buộc gọi lại kết nối trên thread riêng
+        connectBluetoothDevice()
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action == "com.example.loamomo.ACTION_RECONNECT") {
+            connectWithNewConfig()
+        }
+        return START_STICKY // Giữ nguyên cách xử lý Service
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
