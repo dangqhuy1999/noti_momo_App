@@ -89,12 +89,28 @@ class MyNotificationListener : NotificationListenerService() {
 
                 Log.i("BluetoothConnection", "Connection successful to $macAddress!")
 
+                // --- BẮT ĐẦU: LOGIC GỬI DỮ LIỆU TEST ---
+                val testData = "so tien: 300 d"
+
+                // Chờ một chút để ConnectedThread kịp khởi tạo và chạy (optional, nhưng an toàn hơn)
+                Thread.sleep(500)
+
+                // Gọi hàm gửi dữ liệu test
+                connectedThread?.write(testData.toByteArray())
+                Log.d("BluetoothTest", "Sent test data: '$testData' to Pico/ESP32.")
+                // --- KẾT THÚC: LOGIC GỬI DỮ LIỆU TEST ---
+
             } catch (e: IOException) {
                 Log.e("BluetoothConnection", "Unable to connect: ${e.message}", e)
                 closeBluetooth() // Đảm bảo đóng socket nếu thất bại
                 // Không cần logic reconnect ở đây, nó sẽ được xử lý trong ConnectedThread nếu bị mất
             } catch (e: SecurityException) {
                 Log.e("BluetoothConnection", "Permission missing (BLUETOOTH_CONNECT): ${e.message}", e)
+            }
+            // Thêm catch cho InterruptedException nếu Thread.sleep() được dùng
+            catch (e: InterruptedException) {
+                Log.e("BluetoothConnection", "Thread interrupted during sleep: ${e.message}", e)
+                Thread.currentThread().interrupt()
             }
         }.start()
     }
