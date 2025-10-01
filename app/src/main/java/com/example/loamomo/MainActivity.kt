@@ -30,6 +30,9 @@ import android.content.Context
 import android.content.IntentFilter
 import android.os.Handler
 import android.os.Looper
+import android.app.ProgressDialog // Hoặc dùng Material/AppCompat Dialog nếu cần tùy chỉnh cao hơn
+import android.widget.ArrayAdapter
+
 
 class MainActivity : AppCompatActivity() {
 
@@ -43,6 +46,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvSelectedMacAddress: TextView // View mới hiển thị MAC đã chọn
     private lateinit var btnScanDevice: Button         // Button Quét mới
     private lateinit var bluetoothAdapter: BluetoothAdapter
+    private lateinit var progressDialog: ProgressDialog // Biến mới
 
     private var selectedMacAddress: String? = null // Biến lưu trữ MAC đã chọn
 
@@ -78,6 +82,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_bluetooth)
 
+
         // Ánh xạ View từ XML
         tvSelectedMacAddress = findViewById(R.id.tv_selected_mac_address) // Ánh xạ mới
         btnScanDevice = findViewById(R.id.btn_scan_device)               // Ánh xạ mới
@@ -91,6 +96,13 @@ class MainActivity : AppCompatActivity() {
 
         // Khởi tạo SharedPreferences
         sharedPrefs = getSharedPreferences("AppConfig", MODE_PRIVATE)
+
+        // Khởi tạo Dialog
+        progressDialog = ProgressDialog(this).apply {
+            setMessage("Đang tìm kiếm thiết bị Bluetooth...")
+            setCancelable(false) // Không cho hủy bằng cách nhấn ngoài hoặc nút Back
+            setProgressStyle(ProgressDialog.STYLE_SPINNER) // Kiểu vòng tròn quay
+        }
 
         // 1. Load cấu hình đã lưu
         loadConfig()
@@ -141,7 +153,6 @@ class MainActivity : AppCompatActivity() {
         etUuid.setText(sharedPrefs.getString("bluetooth_uuid", "00001101-0000-1000-8000-00805F9B34FB"))
         etPackageName.setText(sharedPrefs.getString("notification_package", "com.mservice.momotransfer"))
     }
-
 
     private fun saveConfig() {
         // *** LƯU MAC TỪ BIẾN selectedMacAddress ĐÃ CHỌN TRONG QUÁ TRÌNH QUÉT ***
@@ -219,8 +230,6 @@ class MainActivity : AppCompatActivity() {
         return hasPermission
     }
 
-
-
     private fun stopNotificationService() {
         val serviceIntent = Intent(this, MyNotificationListener::class.java)
         stopService(serviceIntent)
@@ -257,6 +266,12 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
+        // --- PHẦN CẢI TIẾN: QUẢN LÝ DIALOG KHI BẮT ĐẦU ---
+        // Khóa nút (Đã làm ở bước trước, có thể giữ lại hoặc chỉ dùng Dialog)
+        btnScanDevice.isEnabled = false
+        progressDialog.show()
+        // -----------------------------------------------------------
+
         if (bluetoothAdapter.isDiscovering) {
             // Cần BLUETOOTH_SCAN để gọi cancelDiscovery()
             try {
@@ -279,6 +294,11 @@ class MainActivity : AppCompatActivity() {
         } catch (e: SecurityException) {
             Log.e("BluetoothScan", "Permission BLUETOOTH_SCAN missing or denied.", e)
             Toast.makeText(this, "Lỗi: Thiếu quyền quét Bluetooth.", Toast.LENGTH_SHORT).show()
+            // --- PHỤC HỒI NẾU LỖI NGAY LẬP TỨC ---
+            if (progressDialog.isShowing) {
+                progressDialog.dismiss()
+            }
+            btnScanDevice.isEnabled = true
         }
     }
     // MainActivity.kt (Tiếp tục)
@@ -300,16 +320,34 @@ class MainActivity : AppCompatActivity() {
                     } catch (e: SecurityException) {
                         Log.e("BluetoothScan", "Permission BLUETOOTH_CONNECT missing for getting device name.", e)
                     }
+                    // --- CẢI TIẾN: CẬP NHẬT TRẠNG THÁI TRÊN DIALOG ---
+                    if (progressDialog.isShowing) {
+                        progressDialog.setMessage("Đang tìm kiếm thiết bị... (${foundDevices.size} thiết bị đã tìm thấy)")
+                    }
+                    // --------------------------------------------------
                 }
                 BluetoothAdapter.ACTION_DISCOVERY_FINISHED -> {
                     // Khi quá trình quét kết thúc
                     Log.d("BluetoothScan", "Device discovery finished. Found ${foundDevices.size} devices.")
+                    // 1. ĐÓNG DIALOG QUAY VÒNG
+                    if (progressDialog.isShowing) {
+                        progressDialog.dismiss()
+                    }
+
+                    // 2. PHỤC HỒI NÚT VÀ HIỂN THỊ HỘP THOẠI CHỌN
+                    resetScanButton()
                     showDeviceSelectionDialog()
                 }
             }
         }
     }
     // MainActivity.kt (Tiếp tục)
+
+    private fun resetScanButton() {
+        btnScanDevice.isEnabled = true
+        btnScanDevice.text = "Quét & Chọn Thiết Bị"
+        loadConfig() // Tải lại MAC đã chọn (hoặc mặc định)
+    }
 
     private fun showDeviceSelectionDialog() {
         if (foundDevices.isEmpty()) {
