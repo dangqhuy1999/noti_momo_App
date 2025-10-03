@@ -15,8 +15,9 @@ This project utilizes a custom Android application to listen for payment notific
 | **Receiver & Player** | Microcontroller/Processor | **ESP32**, Bluetooth Classic |
 | **Audio Playback** | Class D Amplifier Chip | **MAX98357A** (or DFPlayer) |
 
----
 ![Hình ảnh minh họa cấp quyền thông báo](docs/AppDemo.png)
+
+---
 
 ## ✅ System Requirements (Yêu cầu Hệ thống)
 
