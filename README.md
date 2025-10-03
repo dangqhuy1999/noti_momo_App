@@ -18,6 +18,15 @@ This project utilizes a custom Android application to listen for payment notific
 ---
 ![Hình ảnh minh họa cấp quyền thông báo](docs/AppDemo.png)
 
+## ✅ System Requirements (Yêu cầu Hệ thống)
+
+| Cấu hình | Giá trị | Ý nghĩa |
+| :--- | :--- | :--- |
+| **`minSdk`** | **26** | Phiên bản Android tối thiểu được hỗ trợ (**Android 8.0, Oreo**). Các thiết bị cũ hơn sẽ không thể cài đặt ứng dụng này. |
+| **`targetSdk`** | **33** | Phiên bản Android mà ứng dụng được tối ưu hóa. Ứng dụng sẽ hoạt động theo hành vi của Android 13. |
+| **`compileSdk`** | **35** | Phiên bản SDK được sử dụng để biên dịch (build) dự án. |
+
+
 ## 🛠️ Android Application Usage Guide
 
 The Android application is responsible for device scanning, saving the configuration, and maintaining a stable Bluetooth connection with the ESP32.
