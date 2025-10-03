@@ -16,7 +16,7 @@ This project utilizes a custom Android application to listen for payment notific
 | **Audio Playback** | Class D Amplifier Chip | **MAX98357A** (or DFPlayer) |
 
 ---
-
+![Hình ảnh minh họa cấp quyền thông báo](docs/AppDemo.png)
 ## 🛠️ Android Application Usage Guide
 
 The Android application is responsible for device scanning, saving the configuration, and maintaining a stable Bluetooth connection with the ESP32.
