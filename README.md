@@ -21,12 +21,13 @@ This project utilizes a custom Android application to listen for payment notific
 
 ## ✅ System Requirements (Yêu cầu Hệ thống)
 
-| Cấu hình | Giá trị | Ý nghĩa |
+| Configuration | Value | Meaning |
 | :--- | :--- | :--- |
-| **`minSdk`** | **26** | Phiên bản Android tối thiểu được hỗ trợ (**Android 8.0, Oreo**). Các thiết bị cũ hơn sẽ không thể cài đặt ứng dụng này. |
-| **`targetSdk`** | **33** | Phiên bản Android mà ứng dụng được tối ưu hóa. Ứng dụng sẽ hoạt động theo hành vi của Android 13. |
-| **`compileSdk`** | **35** | Phiên bản SDK được sử dụng để biên dịch (build) dự án. |
+| **`minSdk`** | **26** | **The minimum supported version** (**Android 8.0, Oreo**). Devices running older Android versions **cannot install** this app. |
+| **`targetSdk`** | **33** | **The Android version this application is optimized for.** The app will run using the **Android 13** behavior framework. |
+| **`compileSdk`** | **35** | **The SDK version used to compile** (build) the project. |
 
+---
 
 ## 🛠️ Android Application Usage Guide
 
