@@ -28,12 +28,12 @@ The Android application is responsible for device scanning, saving the configura
 2.  **Grant Permissions:** The first time you open the app, Android will request the following permissions. Please **allow all** for scanning and connectivity to work:
     * **Bluetooth/Nearby Devices** (`BLUETOOTH_SCAN`, `BLUETOOTH_CONNECT`)
     * **Location** (Required for scanning Bluetooth devices on modern Android versions)
+
+3.  **Grant Notification Access:** The application will direct you to the system settings. Please find your application (e.g., **`com.example.loamomo`**) and **enable Notification Access**.
+
 ![Hình ảnh minh họa cấp quyền thông báo](docs/GrantPermissions.png)
 
 ![Hình ảnh minh họa cấp quyền thông báo](docs/GrantPermissions_2.png)
-
-
-3.  **Grant Notification Access:** The application will direct you to the system settings. Please find your application (e.g., **`com.example.loamomo`**) and **enable Notification Access**.
 
 ### Step 2: Scan and Select the ESP32 Device
 
