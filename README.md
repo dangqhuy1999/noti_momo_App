@@ -19,7 +19,7 @@ This project utilizes a custom Android application to listen for payment notific
 
 ---
 
-## ✅ System Requirements (Yêu cầu Hệ thống)
+## ✅ System Requirements
 
 | Configuration | Value | Meaning |
 | :--- | :--- | :--- |
