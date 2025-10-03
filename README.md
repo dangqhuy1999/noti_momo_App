@@ -17,6 +17,7 @@ This project utilizes a custom Android application to listen for payment notific
 
 ---
 ![Hình ảnh minh họa cấp quyền thông báo](docs/AppDemo.png)
+
 ## 🛠️ Android Application Usage Guide
 
 The Android application is responsible for device scanning, saving the configuration, and maintaining a stable Bluetooth connection with the ESP32.
@@ -27,12 +28,20 @@ The Android application is responsible for device scanning, saving the configura
 2.  **Grant Permissions:** The first time you open the app, Android will request the following permissions. Please **allow all** for scanning and connectivity to work:
     * **Bluetooth/Nearby Devices** (`BLUETOOTH_SCAN`, `BLUETOOTH_CONNECT`)
     * **Location** (Required for scanning Bluetooth devices on modern Android versions)
+![Hình ảnh minh họa cấp quyền thông báo](docs/GrantPermissions.png)
+
+![Hình ảnh minh họa cấp quyền thông báo](docs/GrantPermissions_2.png)
+
+
 3.  **Grant Notification Access:** The application will direct you to the system settings. Please find your application (e.g., **`com.example.loamomo`**) and **enable Notification Access**.
 
 ### Step 2: Scan and Select the ESP32 Device
 
 1.  On the main screen of the application, press the **"Scan & Select Bluetooth Device"** button.
 2.  A dialog box will appear listing the found Bluetooth devices.
+
+![Hình ảnh minh họa quét và chọn thiết bị](docs/ScanBluetoothDevice.png)
+
 3.  **Select your ESP32/HC-05 device** (Names are typically "ESP32-BT" or "HC-05", etc.). The MAC address of the selected device will be displayed in the **"MAC Address"** field.
 
 ### Step 3: Save Configuration and Start Service
@@ -42,6 +51,8 @@ The Android application is responsible for device scanning, saving the configura
 3.  Press the **"Save Config and Start Service"** button.
     * **IMPORTANT:** The app will automatically send a command to the running Service to **re-read the new configuration and immediately reconnect** the Bluetooth. You do not need to close and reopen the application.
     * The connection status will be shown on the screen.
+
+![Hình ảnh minh họa cấp quyền thông báo](docs/SaveAndStartService.png)
 
 ---
 
