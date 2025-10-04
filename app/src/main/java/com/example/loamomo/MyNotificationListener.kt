@@ -26,7 +26,7 @@ class MyNotificationListener : NotificationListenerService() {
         //com.android.chrome
         //com.mservice.momotransfer
         //com.skype.raider
-        private const val MOMO_PACKAGE_NAME = "com.skype.raider"
+        private const val MOMO_PACKAGE_NAME = "com.mservice.momotransfer"
         private val MY_UUID: UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
     }
 
@@ -34,15 +34,29 @@ class MyNotificationListener : NotificationListenerService() {
     override fun onCreate() {
         super.onCreate()
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
-        val device: BluetoothDevice = bluetoothAdapter.getRemoteDevice("98:D3:02:96:70:F0") // Địa chỉ MAC của thiết bị Bluetooth
-        bluetoothSocket = device.createRfcommSocketToServiceRecord(MY_UUID)
-        try {
-            bluetoothSocket.connect()
-            connectedThread = ConnectedThread(bluetoothSocket)
-            connectedThread.start()
-        } catch (e: IOException) {
-            Log.e("BluetoothConnection", "Unable to connect: ${e.message}", e)
-        }
+        connectBluetooth() // <-- Gọi hàm kết nối trên một Thread riêng
+    }
+
+    @RequiresPermission(value = "android.permission.BLUETOOTH_CONNECT")
+    private fun connectBluetooth() {
+        Thread {
+            try {
+                val device: BluetoothDevice = bluetoothAdapter.getRemoteDevice("B8:D6:1A:B9:E8:B2")
+                bluetoothSocket = device.createRfcommSocketToServiceRecord(MY_UUID)
+
+                Log.d("BluetoothConnection", "Attempting to connect...")
+                bluetoothSocket.connect() // Thao tác chặn, nay chạy trên Thread riêng
+
+                Log.i("BluetoothConnection", "Connection successful!")
+                connectedThread = ConnectedThread(bluetoothSocket)
+                connectedThread.start()
+            } catch (e: IOException) {
+                Log.e("BluetoothConnection", "Unable to connect: ${e.message}", e)
+                // Bạn có thể thêm logic thử kết nối lại ở đây nếu cần
+            } catch (e: SecurityException) {
+                Log.e("BluetoothConnection", "Permission missing (BLUETOOTH_CONNECT): ${e.message}", e)
+            }
+        }.start()
     }
     fun convertToNoAccent(input: String): String {
         val accents = mapOf(
@@ -80,7 +94,12 @@ class MyNotificationListener : NotificationListenerService() {
                 notificationObject.put("packageName", sbn.packageName)
                 notificationObject.put("title", extras.getString("android.title"))
 
-                val text = extras.getString("android.text") ?: extras.getString("android.bigText") ?: "No Text"
+                val textCharSequence: CharSequence? = extras.getCharSequence("android.text")
+                val bigTextCharSequence: CharSequence? = extras.getCharSequence("android.bigText")
+
+                // Sử dụng toString() an toàn để chuyển CharSequence sang String
+                val text: String = (textCharSequence ?: bigTextCharSequence)?.toString() ?: "No Text"
+
                 notificationObject.put("text", convertToNoAccent(text))
                 //notificationObject.put("text", text)
                 //convertToNoAccent(text)
@@ -88,6 +107,7 @@ class MyNotificationListener : NotificationListenerService() {
                 writeToFile(notificationsArray.toString())
 
                 val output = convertToNoAccent(text)
+                Log.d("MoMoNotification", "Parsed and sending: $output") // <-- THÊM LOG NÀY
 
                 // Gửi dữ liệu qua Bluetooth
                 sendData(output)
@@ -98,8 +118,17 @@ class MyNotificationListener : NotificationListenerService() {
             }
         }
     }
+    // Trong sendData
     private fun sendData(data: String) {
-        connectedThread.write(data.toByteArray())
+        if (::connectedThread.isInitialized) { // Kiểm tra đã khởi tạo chưa
+            try {
+                connectedThread.write(data.toByteArray())
+            } catch (e: Exception) {
+                Log.e("BluetoothSend", "Error writing data after connection: ${e.message}", e)
+            }
+        } else {
+            Log.e("BluetoothSend", "Error: ConnectedThread not initialized. Bluetooth connection failed in onCreate.")
+        }
     }
     private fun writeToFile(data: String) {
         val file = File(getExternalFilesDir(null), "notifications.json")
@@ -129,6 +158,8 @@ class MyNotificationListener : NotificationListenerService() {
         fun write(bytes: ByteArray) {
             try {
                 outputStream.write(bytes)
+                Log.i("ConnectedThread", "Data sent successfully: ${String(bytes)}") // <-- THÊM LOG NÀY
+
             } catch (e: IOException) {
                 Log.e("BluetoothActivity", "Error sending data", e)
             }

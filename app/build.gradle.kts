@@ -15,7 +15,10 @@ if (secretsPropsFile.exists()){
 android {
     namespace = "com.example.loamomo"
     compileSdk = 35
-
+    buildFeatures {
+        // THÊM DÒNG NÀY ĐỂ BẬT TÍNH NĂNG BUILDCONFIG
+        buildConfig = true
+    }
     defaultConfig {
         applicationId = "com.example.loamomo"
         minSdk = 28
