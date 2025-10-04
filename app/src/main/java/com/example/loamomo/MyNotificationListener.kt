@@ -4,7 +4,10 @@ import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothManager // <-- THÊM DÒNG NÀY
 import android.bluetooth.BluetoothSocket
+import android.content.Intent
+import android.content.Context // <-- THÊM DÒNG NÀY
 import android.util.Log
 import androidx.annotation.RequiresPermission
 import org.json.JSONArray
@@ -18,46 +21,133 @@ import java.util.*
 
 class MyNotificationListener : NotificationListenerService() {
     private val notificationsArray = JSONArray()
+
+    // Biến cho Bluetooth (Nullable và an toàn)
     private lateinit var bluetoothAdapter: BluetoothAdapter
-    private lateinit var bluetoothSocket: BluetoothSocket
-    private lateinit var connectedThread: ConnectedThread
+
+    private var bluetoothSocket: BluetoothSocket? = null
+    private var connectedThread: ConnectedThread? = null
+
+    // Biến lưu trữ cấu hình đọc từ SharedPreferences (Đọc 1 lần trong onCreate)
+    private var macAddress: String? = null
+    private var targetUUID: UUID = DEFAULT_UUID
+    private var packageNameFilter: String = "com.mservice.momotransfer"
 
     private companion object {
-        //com.android.chrome
-        //com.mservice.momotransfer
-        //com.skype.raider
-        private const val MOMO_PACKAGE_NAME = "com.mservice.momotransfer"
-        private val MY_UUID: UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
+        private val DEFAULT_UUID: UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
+        private const val RECONNECT_DELAY_MS = 5000L // Đợi 5 giây trước khi kết nối lại
     }
 
     @RequiresPermission(value = "android.permission.BLUETOOTH_CONNECT")
     override fun onCreate() {
         super.onCreate()
+        Log.d("ServiceLifecycle", "MyNotificationListener Service STARTED.") // <-- THÊM LOG NÀY
+        // --- BẮT ĐẦU: Logic khởi tạo bị thiếu ---
+        val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+        bluetoothAdapter = bluetoothManager.adapter
+        // --- KẾT THÚC: Logic khởi tạo bị thiếu ---
+
+        if (bluetoothAdapter == null || !bluetoothAdapter.isEnabled) {
+            Log.e("BluetoothConnection", "Bluetooth not supported or not enabled.")
+            // Không thể tiếp tục nếu Bluetooth không sẵn sàng.
+            // Cân nhắc tắt Service hoặc báo lỗi.
+            return
+        }
+
+        // *** CẢI TIẾN 1: ĐỌC TẤT CẢ CONFIG TỪ SharedPreferences TRONG onCreate() ***
+        val sharedPrefs = applicationContext.getSharedPreferences("AppConfig", MODE_PRIVATE)
+        macAddress = sharedPrefs.getString("bluetooth_mac", null)
+        val uuidString = sharedPrefs.getString("bluetooth_uuid", null)
+        packageNameFilter = sharedPrefs.getString("notification_package", "com.mservice.momotransfer")!!
+
+        if (macAddress.isNullOrEmpty()) {
+            Log.e("BluetoothConnection", "MAC Address not configured. Skipping Bluetooth connection.")
+            return
+        }
+
+        targetUUID = try {
+            UUID.fromString(uuidString ?: DEFAULT_UUID.toString())
+        } catch (e: IllegalArgumentException) {
+            Log.e("BluetoothConnection", "Invalid UUID format: $uuidString. Using default UUID.", e)
+            DEFAULT_UUID
+        }
+
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
-        connectBluetooth() // <-- Gọi hàm kết nối trên một Thread riêng
+        if (bluetoothAdapter == null || !bluetoothAdapter.isEnabled) {
+            Log.e("BluetoothConnection", "Bluetooth not supported or not enabled.")
+            return
+        }
+
+        // *** BẮT BUỘC: GỌI KẾT NỐI TRÊN THREAD RIÊNG ***
+        connectBluetoothDevice()
     }
 
+    // Hàm riêng để xử lý kết nối Bluetooth (Chạy trên Thread riêng)
     @RequiresPermission(value = "android.permission.BLUETOOTH_CONNECT")
-    private fun connectBluetooth() {
+    private fun connectBluetoothDevice() {
+        if (macAddress == null) return
+
         Thread {
+            Log.d("BluetoothConnection", "Attempting to connect to $macAddress...")
             try {
-                val device: BluetoothDevice = bluetoothAdapter.getRemoteDevice("B8:D6:1A:B9:E8:B2")
-                bluetoothSocket = device.createRfcommSocketToServiceRecord(MY_UUID)
+                // Đóng socket cũ trước khi thử kết nối mới
+                closeBluetooth()
 
-                Log.d("BluetoothConnection", "Attempting to connect...")
-                bluetoothSocket.connect() // Thao tác chặn, nay chạy trên Thread riêng
+                val device: BluetoothDevice = bluetoothAdapter.getRemoteDevice(macAddress)
+                val newSocket = device.createRfcommSocketToServiceRecord(targetUUID)
+                newSocket.connect() // Thao tác blocking
 
-                Log.i("BluetoothConnection", "Connection successful!")
-                connectedThread = ConnectedThread(bluetoothSocket)
-                connectedThread.start()
+                // Nếu kết nối thành công:
+                bluetoothSocket = newSocket
+                connectedThread = ConnectedThread(bluetoothSocket!!)
+                connectedThread!!.start()
+
+                Log.i("BluetoothConnection", "Connection successful to $macAddress!")
+
+                // --- BẮT ĐẦU: LOGIC GỬI DỮ LIỆU TEST ---
+                val testData = "so tien: 300 d"
+
+                // Chờ một chút để ConnectedThread kịp khởi tạo và chạy (optional, nhưng an toàn hơn)
+                Thread.sleep(500)
+
+                // Gọi hàm gửi dữ liệu test
+                connectedThread?.write(testData.toByteArray())
+                Log.d("BluetoothTest", "Sent test data: '$testData' to Pico/ESP32.")
+                // --- KẾT THÚC: LOGIC GỬI DỮ LIỆU TEST ---
+
             } catch (e: IOException) {
                 Log.e("BluetoothConnection", "Unable to connect: ${e.message}", e)
-                // Bạn có thể thêm logic thử kết nối lại ở đây nếu cần
+                closeBluetooth() // Đảm bảo đóng socket nếu thất bại
+                // Không cần logic reconnect ở đây, nó sẽ được xử lý trong ConnectedThread nếu bị mất
             } catch (e: SecurityException) {
                 Log.e("BluetoothConnection", "Permission missing (BLUETOOTH_CONNECT): ${e.message}", e)
             }
+            // Thêm catch cho InterruptedException nếu Thread.sleep() được dùng
+            catch (e: InterruptedException) {
+                Log.e("BluetoothConnection", "Thread interrupted during sleep: ${e.message}", e)
+                Thread.currentThread().interrupt()
+            }
         }.start()
     }
+
+    private fun closeBluetooth() {
+        connectedThread?.cancel() // Đóng luồng
+        connectedThread = null
+        try {
+            bluetoothSocket?.close()
+        } catch (e: IOException) {
+            Log.e("BluetoothConnection", "Error closing socket: ${e.message}")
+        } finally {
+            bluetoothSocket = null
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        closeBluetooth() // Đóng kết nối khi service bị hủy
+    }
+
+    // (Hàm convertToNoAccent giữ nguyên)
     fun convertToNoAccent(input: String): String {
         val accents = mapOf(
             'á' to 'a', 'à' to 'a', 'ả' to 'a', 'ã' to 'a', 'ạ' to 'a',
@@ -86,50 +176,80 @@ class MyNotificationListener : NotificationListenerService() {
         return input.map { accents[it] ?: it }.joinToString("")
     }
 
+    // MyNotificationListener.kt
+
+    private fun connectWithNewConfig() {
+        Log.d("ServiceConfig", "Received command to read new config and reconnect.")
+        // Lặp lại logic đọc config từ SharedPreferences và kết nối lại
+        val sharedPrefs = applicationContext.getSharedPreferences("AppConfig", MODE_PRIVATE)
+        macAddress = sharedPrefs.getString("bluetooth_mac", null)
+        val uuidString = sharedPrefs.getString("bluetooth_uuid", null)
+        packageNameFilter = sharedPrefs.getString("notification_package", "com.mservice.momotransfer")!!
+
+        targetUUID = try {
+            UUID.fromString(uuidString ?: DEFAULT_UUID.toString())
+        } catch (e: IllegalArgumentException) {
+            DEFAULT_UUID
+        }
+
+        // Bắt buộc gọi lại kết nối trên thread riêng
+        connectBluetoothDevice()
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action == "com.example.loamomo.ACTION_RECONNECT") {
+            connectWithNewConfig()
+        }
+        return START_STICKY // Giữ nguyên cách xử lý Service
+    }
+
     override fun onNotificationPosted(sbn: StatusBarNotification) {
-        if (sbn.packageName == MOMO_PACKAGE_NAME) {
+        // *** CẢI TIẾN 2: SỬ DỤNG PACKAGE FILTER ĐÃ ĐỌC TRONG onCreate() ***
+        if (sbn.packageName == packageNameFilter) {
+
             val notificationObject = JSONObject()
             try {
                 val extras = sbn.notification.extras
                 notificationObject.put("packageName", sbn.packageName)
                 notificationObject.put("title", extras.getString("android.title"))
 
+                // Fix lỗi ClassCastException: Dùng getCharSequence()
                 val textCharSequence: CharSequence? = extras.getCharSequence("android.text")
                 val bigTextCharSequence: CharSequence? = extras.getCharSequence("android.bigText")
-
-                // Sử dụng toString() an toàn để chuyển CharSequence sang String
                 val text: String = (textCharSequence ?: bigTextCharSequence)?.toString() ?: "No Text"
 
                 notificationObject.put("text", convertToNoAccent(text))
-                //notificationObject.put("text", text)
-                //convertToNoAccent(text)
+
                 notificationsArray.put(notificationObject)
-                writeToFile(notificationsArray.toString())
 
                 val output = convertToNoAccent(text)
-                Log.d("MoMoNotification", "Parsed and sending: $output") // <-- THÊM LOG NÀY
+                Log.d("MoMoNotification", "Parsed and sending: $output")
 
                 // Gửi dữ liệu qua Bluetooth
                 sendData(output)
-                // object.toString())
-                //sendData(output)
+
             } catch (e: Exception) {
                 Log.e("NotificationReader", "Error creating JSON", e)
             }
         }
     }
-    // Trong sendData
+
     private fun sendData(data: String) {
-        if (::connectedThread.isInitialized) { // Kiểm tra đã khởi tạo chưa
+        if (connectedThread != null) {
             try {
-                connectedThread.write(data.toByteArray())
+                connectedThread?.write(data.toByteArray())
             } catch (e: Exception) {
-                Log.e("BluetoothSend", "Error writing data after connection: ${e.message}", e)
+                Log.e("BluetoothSend", "Error writing data: ${e.message}. Attempting reconnect.", e)
+                // Kích hoạt logic kết nối lại nếu gửi thất bại
+                connectBluetoothDevice()
             }
         } else {
-            Log.e("BluetoothSend", "Error: ConnectedThread not initialized. Bluetooth connection failed in onCreate.")
+            Log.e("BluetoothSend", "Error: ConnectedThread not ready. Attempting connection.",)
+            connectBluetoothDevice() // Thử kết nối nếu chưa có thread
         }
     }
+
+    // (Hàm writeToFile bên ngoài giữ nguyên nếu cần, nhưng không được gọi)
     private fun writeToFile(data: String) {
         val file = File(getExternalFilesDir(null), "notifications.json")
         try {
@@ -141,42 +261,70 @@ class MyNotificationListener : NotificationListenerService() {
             Log.e("NotificationReader", "Error writing to file", e)
         }
     }
-    private inner class ConnectedThread(socket: BluetoothSocket) : Thread() {
+
+    private inner class ConnectedThread(private val socket: BluetoothSocket) : Thread() {
         private val inputStream: InputStream = socket.inputStream
         private val outputStream: OutputStream = socket.outputStream
-        private fun writeToFile(data: String) {
-            val file = File(getExternalFilesDir(null), "notifications.txt")
-            try {
-                FileOutputStream(file, true).use { fos ->  // Append mode
-                    fos.write(data.toByteArray())
-                    fos.write('\n'.code) // Optional: Add a newline for each entry
-                }
-            } catch (e: IOException) {
-                Log.e("NotificationReader", "Error writing to file", e)
-            }
-        }
+        @Volatile private var isRunning = true // Cờ để kiểm soát vòng lặp run()
+
+        // *** HÀM writeToFile THỪA ĐÃ ĐƯỢC XÓA KHỎI ConnectedThread ***
+
         fun write(bytes: ByteArray) {
             try {
-                outputStream.write(bytes)
-                Log.i("ConnectedThread", "Data sent successfully: ${String(bytes)}") // <-- THÊM LOG NÀY
+                // Thêm ký tự xuống dòng (\n)
+                val dataWithTerminator = bytes + "\n".toByteArray(Charsets.UTF_8)
 
+                outputStream.write(dataWithTerminator)
+                Log.i("ConnectedThread", "Data sent successfully with terminator: ${String(bytes)}")
             } catch (e: IOException) {
                 Log.e("BluetoothActivity", "Error sending data", e)
+                throw e // Ném lỗi để sendData có thể bắt và kích hoạt reconnect
             }
         }
+
+        // Dùng để dừng thread một cách an toàn
+        fun cancel() {
+            isRunning = false
+            try {
+                socket.close() // Việc đóng socket sẽ gây ra IOException và thoát khỏi vòng lặp run()
+            } catch (e: IOException) {
+                Log.e("ConnectedThread", "close() of connect socket failed", e)
+            }
+        }
+
         override fun run() {
             val buffer = ByteArray(1024)
             var bytes: Int
-            while (true) {
+            while (isRunning) { // Dùng cờ isRunning
                 try {
                     bytes = inputStream.read(buffer)
-                    val receivedData = String(buffer, 0, bytes)
-                    writeToFile(receivedData)
-                    // Xử lý dữ liệu nhận nếu cần
+                    if (bytes > 0) {
+                        val receivedData = String(buffer, 0, bytes)
+                        // Xử lý dữ liệu nhận nếu cần (ví dụ: phản hồi từ Pico)
+                        Log.d("ConnectedThread", "Received data: $receivedData")
+                    }
                 } catch (e: IOException) {
-                    Log.e("BluetoothActivity", "Connection lost", e)
-                    break
+                    if (isRunning) { // Chỉ reconnect nếu không phải do cancel()
+                        Log.e("BluetoothActivity", "Connection lost, attempting reconnect...", e)
+                        // *** KHUYẾN NGHỊ: TỰ ĐỘNG KẾT NỐI LẠI ***
+                        try {
+                            Thread.sleep(RECONNECT_DELAY_MS)
+                        } catch (ie: InterruptedException) {
+                            Thread.currentThread().interrupt()
+                        }
+
+                        // Gọi hàm kết nối lại trong Service (phải dùng runOnUiThread hoặc Handler)
+                        // Do bạn không có Handler, gọi connectBluetoothDevice() là cách đơn giản nhất
+                        // Tuy nhiên, việc này sẽ chạy trên Thread hiện tại, hơi phức tạp.
+                        // Để đơn giản, ta sẽ chỉ gọi hàm kết nối lại từ luồng chính (Main Thread)
+                        // Bắt buộc phải tắt Thread hiện tại và Main Thread sẽ lo reconnect
+                        break
+                    }
                 }
+            }
+            // Nếu thoát vòng lặp, tự động thử kết nối lại
+            if (isRunning) {
+                connectBluetoothDevice()
             }
         }
     }

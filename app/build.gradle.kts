@@ -16,12 +16,12 @@ android {
     namespace = "com.example.loamomo"
     compileSdk = 35
     buildFeatures {
-        // THÊM DÒNG NÀY ĐỂ BẬT TÍNH NĂNG BUILDCONFIG
         buildConfig = true
     }
+
     defaultConfig {
         applicationId = "com.example.loamomo"
-        minSdk = 28
+        minSdk = 26
         targetSdk = 33
         versionCode = 1
         versionName = "1.0"
