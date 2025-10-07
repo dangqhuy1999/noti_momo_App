@@ -1,38 +1,30 @@
-
 // MainActivity.kt
-
 package com.example.loamomo
 
+import android.annotation.SuppressLint
 import android.app.AlertDialog
+import android.app.ProgressDialog
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothDevice
+import android.content.BroadcastReceiver
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.util.Log
 import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
-import androidx.core.content.PermissionChecker
-import androidx.core.app.ActivityCompat
-import android.Manifest
-import android.annotation.SuppressLint
-import android.util.Log
-
-import android.bluetooth.BluetoothAdapter
-import android.bluetooth.BluetoothDevice
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.IntentFilter
-import android.os.Handler
-import android.os.Looper
-import android.app.ProgressDialog // Hoặc dùng Material/AppCompat Dialog nếu cần tùy chỉnh cao hơn
-import android.widget.ArrayAdapter
-
+import android.Manifest // Thư viện Android Framework chuẩn
+import androidx.activity.result.contract.ActivityResultContracts // Thư viện AndroidX
+import androidx.appcompat.app.AppCompatActivity // Thư viện AndroidX
+import androidx.core.content.ContextCompat // Thư viện AndroidX
+import androidx.core.content.PermissionChecker // Thư viện AndroidX
 
 class MainActivity : AppCompatActivity() {
 
@@ -47,7 +39,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnScanDevice: Button         // Button Quét mới
     private lateinit var bluetoothAdapter: BluetoothAdapter
     private lateinit var progressDialog: ProgressDialog // Biến mới
-
     private var selectedMacAddress: String? = null // Biến lưu trữ MAC đã chọn
 
     // Danh sách thiết bị tìm thấy (dùng để hiển thị cho người dùng)
@@ -81,7 +72,6 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_bluetooth)
-
 
         // Ánh xạ View từ XML
         tvSelectedMacAddress = findViewById(R.id.tv_selected_mac_address) // Ánh xạ mới
@@ -129,13 +119,14 @@ class MainActivity : AppCompatActivity() {
         filter.addAction(BluetoothDevice.ACTION_FOUND)
         filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED)
         registerReceiver(bluetoothReceiver, filter)
-
     }
+
     override fun onDestroy() {
         super.onDestroy()
         // Hủy đăng ký BroadcastReceiver khi Activity bị hủy
         unregisterReceiver(bluetoothReceiver)
     }
+
     override fun onResume() {
         super.onResume()
         // Cập nhật trạng thái mỗi khi Activity trở lại foreground
@@ -185,7 +176,6 @@ class MainActivity : AppCompatActivity() {
         startService(reconnectIntent)
 
         // ------------------------------------------------------------------
-
         Log.i("MainActivity", "Saved config: MAC=$mac, UUID=$uuid, Package=$pkg")
     }
 
@@ -255,7 +245,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     // MainActivity.kt
-
     @SuppressLint("MissingPermission")
     private fun startScanning() {
         // 1. Kiểm tra Quyền Tổng Thể trước khi tiến hành
